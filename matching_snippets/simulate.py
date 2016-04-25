@@ -3,10 +3,10 @@ from os import listdir
 from random import choice, random
 from preprocess import preprocess
 from code import interact
+from copy import copy
+from utils import corrupt_text, corrupt_book
 
-from utils import corrupt_text
-
-def identify_from_sample(collection, author_to_books, iters, corruption_prob, snippet_size):
+def identify_from_sample(collection, author_to_books, iters):
   #Simulate identifying which work a snippet came from 
   # when the snippet came from the initial collection
 
@@ -16,20 +16,25 @@ def identify_from_sample(collection, author_to_books, iters, corruption_prob, sn
     author = choice(author_to_books.keys())
   
     #Randomly select a book
-    title, doc = choice(author_to_books[author])
+    title, doc = copy(choice(author_to_books[author]))
   
     #Randomly select a snippet
-    start_ind = choice(range(len(doc)-snippet_size))
-    snippet = doc[start_ind: start_ind + snippet_size]
+    #start_ind = choice(range(len(doc)-snippet_size))
+    #snippet = doc[start_ind: start_ind + snippet_size]
+    
+    doc = corrupt_book(doc, prob_para=0.1, prob_tok=0.2, prob_mutate=0.5)
+    print 'the new doc'
+    interact(local=locals())
     
     #Corrupt the snippet
-    snippet = corrupt_text(snippet, corruption_prob)
+    #snippet = corrupt_text(snippet, corruption_prob)
     
     print 'Actual:', title, author
-    pred = collection.get_best_match(snippet)
+    pred = collection.get_best_match(doc)
     print pred
+    print '-'*80
 
-    (pred_title, pred_author), count = pred
+    (pred_title, pred_author), score = pred
     
     if pred_title == title and pred_author == author:
       right += 1
