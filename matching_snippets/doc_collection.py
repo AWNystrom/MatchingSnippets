@@ -1,11 +1,14 @@
 from spacy.en import English
 from itertools import izip
-from simhash import SimhashIndex, Simhash
+from simhash import SimhashIndex, Simhash, logging
 from code import interact
 from ast import literal_eval as make_tuple
 from editdistance import eval as levenshtein
 from utils import all_min_or_max
 from random import choice
+from author_identifier import AuthorIdentifier
+
+logging.disable(logging.warning)
 
 """
 ASSUMPTIONS:
@@ -23,10 +26,11 @@ from preprocess import preprocess
 from spelling import SpellingCorrector
 
 class DocCollection(object):
-  def __init__(self, hash_size=128, hash_tol=4):
+  def __init__(self, hash_size=64, hash_tol=5):
     """
     Params:
-      hash_size : The number of output bits of the hash function used in SimHash
+      hash_size : The number of output bits of the hash function used in SimHash.
+                  Higher values -> able to handle more noise.
       hash_tol  : The number of bits that can differ for a candidate near-match in Simhash
     """
     self.hash_size = hash_size
@@ -36,37 +40,47 @@ class DocCollection(object):
     self.simhasher = Simhash(u'', self.hash_size)
     self.tok_to_freq = {}
     self.spelling_corrector = SpellingCorrector({})
+    self.author_identifier = AuthorIdentifier()
   
+  def generate_simhash(self, tokens):
+    #Generate a Simhash from Spacy tokens. Stopwords do not affect the hash.
+    sh = Simhash(u'', f=self.hash_size)
+    toks_used = [t.text for t in tokens]# if not t.is_stop]
+    if not toks_used:
+      return None
+      
+    sh.build_by_features(toks_used)
+    return sh
+    
+    
   def get_sents_and_hashes(self, doc, correct=False):
-    build_by_features = self.simhasher.build_by_features
-    simhasher = self.simhasher
     nlp = self.nlp
     sents_and_hashes = []
     hash_size = self.hash_size
     correct_word = self.spelling_corrector.correct_word
+    generate_simhash = self.generate_simhash
     
     #Parsing and tagging at the same time gives better parsing accuracy,
     #but we don't need entities
     i = -1
     
+    #Having tagging on really improves results. Probably helps with 
+    # sentence boundary detection.
     parsed_doc = nlp(doc, parse=True, tag=True, entity=False)
+    
+    if correct:
+      new_doc = u' '.join([correct_word(t.text) if t.is_alpha else t.text for t in parsed_doc])
+      parsed_doc = nlp(new_doc, parse=True, tag=True, entity=False)
+      
     for sent in parsed_doc.sents:
       sent = parsed_doc[sent.start: sent.end]
       
       #Words will be used for document identification. Semantics are indicative of topic
       
-      if correct:
-        #Only correct all alpha tokens
-        word_toks = [correct_word(t.text) if t.is_alpha else t.text for t in sent]
-      else:
-        word_toks = [t.text for t in sent]
+      sh = generate_simhash(sent)
+      if sh is None:
+        continue
         
-        #ROOM FOR IMPROVEMENT: If any words were corrected, you could re-parse to get
-        #better syntax tags for author identification.
-        
-      sh = Simhash(u'', hash_size)
-      sh.build_by_features(word_toks)
-      
       i += 1
       sents_and_hashes.append((sent, sh, i))
       
@@ -77,15 +91,15 @@ class DocCollection(object):
     doc = preprocess(doc)
     tok_to_freq = self.tok_to_freq
     spelling_corrector = self.spelling_corrector
+    author_identifier = self.author_identifier
     
     #Index each sentence in the document
     for sent, simhash, sent_id in self.get_sents_and_hashes(doc):
-      
+
+      author_identifier.add_doc([sent], author)
+            
       #Words will be used for document identification. Semantics are indicative of topic.
       add_to_index((title, author, sent_id, [t.text for t in sent]), simhash)
-      
-      #The parse is for authorship identification. Syntax is indicative of author.
-      syntax_toks = [t.dep for t in sent]
       
       #Show the words to the spelling corrector so that it can correct future words into
       #these if need be.
@@ -96,8 +110,14 @@ class DocCollection(object):
   def get_best_match(self, snippet):
     matches_list = []
     get_matches = self.simhash_index.get_near_dups
+    generate_simhash = self.generate_simhash
     
-    for sent, simhash, sent_id in self.get_sents_and_hashes(snippet):#, correct=True):
+    sents_and_hashes = self.get_sents_and_hashes(snippet)
+    
+    author_guess = self.author_identifier.predict_author(elem[0] for elem in sents_and_hashes)
+    
+    #For each sentence, get all near dups. Vote on which book it came from over all sents.
+    for sent, simhash, sent_id in sents_and_hashes:#, correct=True):
       toks = [t.text for t in sent]
       matching_sents = [make_tuple(match) for match in get_matches(simhash)]
       if matching_sents > 1:
