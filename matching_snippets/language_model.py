@@ -3,25 +3,29 @@ from itertools import chain
 from numpy.random import choice
 from numpy import array, argmax
 
-def get_freqdist(tokens, order):
-  freqs = {}
-  ngram_gen = ((tuple(tokens[i:i+k]) for i in xrange(len(tokens)-k+1)) for k in xrange(1, order+1))
-  for ngram_order, ngrams_of_order in enumerate(ngram_gen, 1):
-    for ngram in ngrams_of_order:
-      freqs[ngram] = freqs.get(ngram, 0) + 1.
-  return FreqDist(freqs)
-
-class KneserNeyModel(object):
-  def __init__(self, order):
-    pass
-    
-  def fit(self, tokenized_docs):
-    tries = trigrams(chain(toks for toks in tokenized_docs))
-    self.freqs_dist = FreqDist(tries)
-    self.prob_dist = KneserNeyProbDist(self.freqs_dist)
+class SemanticLanguageModels(object):
+  def __init__(self, smoothing=10**-10):
+    self.smoothing = smoothing #used when a probability is zero 
+                               #(happens when an ngram has no parts that have been seen)
+    self.freqdists = {}
+    self.prob_dists = {}
+    self.needs_probs_recounted = {} #True if the underlying freq dist has been changed
+                                    #but the kneser ney counts haven't been updated
   
-  def get_prob(self, tokens):
-    pass#return self.prob_dist.()
+  def add_doc(self, tokens, author):
+    if author not in self.freqdists:
+      self.freqdists[author] = FreqDist()
+      self.prob_dists[author] = KneserNeyProbDist(self.freqdists[author])
+      self.needs_probs_recounted[author] = True
+    fd = FreqDist(trigrams(tokens))
+    self.freqdists[author].update(fd)
+    
+  def generate(self, author, context_tokens, num_words, iters=100):
+    if self.needs_probs_recounted[author]:
+      self.prob_dists[author] = KneserNeyProbDist(self.freqdists[author])
+    tokens = list(context_tokens)
+    fd = self.freqdists[author]
+    while 
 
 def generate(kn, context, num, iters, maxprob=False):
   #Sample the next word, word by word.
@@ -49,9 +53,11 @@ def generate(kn, context, num, iters, maxprob=False):
     generated = [a, b]
     for i in xrange(num):
       #Get weights for next sample
-      candidates = [(k[-1], f) for k, f in kn._trigrams.iteritems() if k[:2] == (a, b) and trigram_frequency.get((a,b,k[-1]), 0) < 1]
+      candidates = [(k[-1], f) for k, f in kn._trigrams.iteritems() if k[:2] == (a, b) and \
+                                                trigram_frequency.get((a,b,k[-1]), 0) < 1]
       if not candidates:
-        candidates = [(k[-1], f) for k, f in kn._bigrams.iteritems() if k[:1] == (b,) and trigram_frequency.get((a,b,k[-1]), 0) < 1]
+        candidates = [(k[-1], f) for k, f in kn._bigrams.iteritems() if k[:1] == (b,) and \
+                                                trigram_frequency.get((a,b,k[-1]), 0) < 1]
       if not candidates:
         #We're in the dark. This is total guessing.
         candidates = [(k, f) for k, f in kn._unigrams.items()]

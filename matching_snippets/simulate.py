@@ -5,6 +5,7 @@ from preprocess import preprocess
 from code import interact
 from copy import copy
 from utils import corrupt_text, corrupt_book
+from time import time
 
 def identify_from_sample(collection, author_to_books, iters):
   #Simulate identifying which work a snippet came from 
@@ -22,15 +23,15 @@ def identify_from_sample(collection, author_to_books, iters):
     #start_ind = choice(range(len(doc)-snippet_size))
     #snippet = doc[start_ind: start_ind + snippet_size]
     
-    doc = corrupt_book(doc, prob_para=0.1, prob_tok=0.2, prob_mutate=0.5)
-    print 'the new doc'
-    interact(local=locals())
+    doc = corrupt_book(doc, prob_para=0.1, prob_tok=0.5, prob_mutate=0.5)
     
     #Corrupt the snippet
     #snippet = corrupt_text(snippet, corruption_prob)
     
     print 'Actual:', title, author
+    a = time()
     pred = collection.get_best_match(doc)
+    print time()-a
     print pred
     print '-'*80
 

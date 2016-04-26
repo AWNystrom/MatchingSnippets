@@ -1,4 +1,7 @@
 from online_gaussian_naive_bayes import OnlineGaussianNaiveBayes
+from numpy import array, log
+from nltk import trigrams, FreqDist, KneserNeyProbDist
+from code import interact
 
 stopword_set =  set([u'a',
                      u'about',
@@ -394,7 +397,71 @@ from scipy.spatial.distance import euclidean
 def closest_from_mean_vec(vec, model):
   return min((euclidean(vec, mean_vec), author) for author, mean_vec in model.mean_.items())[1]
 
-class AuthorIdentifier(object):
+def get_token_shapes(tokens):
+  new_tokens = []
+  for t in tokens:
+    t = t.lower()
+    if t in stopword_set:
+      new_tokens.append('STOP')
+    elif t in punct:
+      new_tokens.append(t)
+    else:
+      #Create a new token based on the word length
+      tok_len = len(t)
+      if tok_len < 7:
+        new_tokens.append('SHORT')
+      elif tok_len < 12:
+        new_tokens.append('MEDIUM')
+      else:
+        new_tokens.append('LONG')
+  return new_tokens
+
+class LanguageModelAuthorIdentifier(object):
+  def __init__(self, smoothing=10**-10):
+    self.smoothing = smoothing #used when a probability is zero 
+                               #(happens when an ngram has no parts that have been seen)
+    self.freqdists = {}
+    self.prob_dists = {}
+    self.needs_probs_recounted = {} #True if the underlying freq dist has been changed
+                                    #but the kneser ney counts haven't been updated
+  
+  def add_doc(self, tokens, author):
+    shape_toks = get_token_shapes(tokens)
+    
+    if author not in self.freqdists:
+      self.freqdists[author] = FreqDist()
+      self.prob_dists[author] = KneserNeyProbDist(self.freqdists[author])
+      self.needs_probs_recounted[author] = True
+    fd = FreqDist(trigrams(shape_toks))
+    self.freqdists[author].update(fd)
+  
+  def predict_author(self, tokens):
+    shape_toks = get_token_shapes(tokens)
+    
+    needs_probs_recounted = self.needs_probs_recounted
+    prob_dists = self.prob_dists
+    freqdists = self.freqdists
+    smoothing = self.smoothing
+    
+    for author in freqdists:
+      #Only recount those that have since been modified (by having a doc added)
+      if needs_probs_recounted[author]:
+        prob_dists[author] = KneserNeyProbDist(freqdists[author])
+        self.needs_probs_recounted[author] = False
+    
+    best_score = None
+    likely_author = None
+    for author, probdist in prob_dists.iteritems():
+      probs = array([probdist.prob(trigram) for trigram in trigrams(shape_toks)], dtype='float')
+      score = log(probs + smoothing).sum()
+      
+      if score > best_score:
+        likely_author = author
+        best_score = score
+        
+    return likely_author, best_score
+
+class GaussianAuthorIdentifier(object):
   def __init__(self):
     self.author_to_model = {}
     self.D = len(self.doc_to_features([]))

@@ -16,4 +16,4 @@ def extract_paragraphs(doc):
   return paras
 
 def tokenize(doc):
-  return nlp(doc, tag=True, parse=True, entity=False)
+  return [t.text for t in nlp(doc, tag=False, parse=False, entity=False)]

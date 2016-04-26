@@ -8,27 +8,20 @@ from code import interact
 
 logging.disable(logging.warning)
 
-from author_identifier import AuthorIdentifier
+from author_identifier import LanguageModelAuthorIdentifier
 from utils import all_min_or_max
 from tokenization import extract_paragraphs, tokenize
 
 """
-ASSUMPTIONS:
-The input is text.
-The text is English.
-We know the author of each of the original documents.
-
-
 Improvements:
-Track IDs for authors and titles to lower storage space.
-Preprocess input to remove metadata (no cheating)
+Preprocess input to remove metadata
 """
 
 from preprocess import preprocess
 from spelling import SpellingCorrector
 
 class DocCollection(object):
-  def __init__(self, hash_size=64, hash_tol=2):
+  def __init__(self, hash_size=64, hash_tol=1):
     """
     Params:
       hash_size : The number of output bits of the hash function used in SimHash.
@@ -38,7 +31,7 @@ class DocCollection(object):
     self.hash_size = hash_size
     self.hash_tol = hash_tol
     self.simhash_index = SimhashIndex(objs=[], f=self.hash_size, k=self.hash_tol)
-    #self.author_identifier = AuthorIdentifier()
+    self.author_identifier = LanguageModelAuthorIdentifier()
   
   def generate_simhash(self, tokens):
     #Generate a Simhash from Spacy tokens.
@@ -49,15 +42,21 @@ class DocCollection(object):
   def add(self, doc, title, author):
     add_to_index = self.simhash_index.add
     doc = preprocess(doc)
-    #author_identifier = self.author_identifier
+    author_identifier = self.author_identifier
     
     #Index each paragraph in the document into the simhash index
-    for para in extract_paragraphs(doc):
-      tokens = [t.text for t in tokenize(para)]
+    paras = extract_paragraphs(doc)
+    
+    #Update the word shape language model for this author
+    para_toks = [tokenize(p) for p in paras]
+    flat_tokens = [item for sublist in para_toks for item in sublist]
+    author_identifier.add_doc(flat_tokens, author)
+    
+    for para_num, tokens in enumerate(para_toks, 1):
       if not tokens:
         continue
       sh = self.generate_simhash(tokens)
-      self.simhash_index.add((tokens, title, author), sh)
+      self.simhash_index.add((tokens, title, author, para_num), sh)
         
   def get_best_match(self, snippet):
     get_near_dups = self.simhash_index.get_near_dups
@@ -65,6 +64,8 @@ class DocCollection(object):
     title_author_to_count = {}
     
     paras = extract_paragraphs(snippet)
+    
+    #evenly distribute the corrupted paragraphs
     shuffle(paras)
     
     #For each paragraph, get the closest matching previously encountered paragraphs.
@@ -77,6 +78,8 @@ class DocCollection(object):
         if not title_author_to_count:
           #We've seen 10 paragraphs and still have no idea. Probably out of sample.
           break
+        
+        #See if we we're twice as sure as the one we're most sure about than all the rest combined
         vals = title_author_to_count.values()
         if len(title_author_to_count) == 1:
           #We've seen this many and have guessed the same work every time
@@ -86,51 +89,31 @@ class DocCollection(object):
         others = sum(vals[1:])
         if vals[0] >= 2*others:
           break #yeah, we're pretty sure it's this one.
-        
       
-      tokens = [t.text for t in tokenize(para)]
+      tokens = tokenize(para)
       sh = generate_simhash(tokens)
       candidates = [make_tuple(match) for match in get_near_dups(sh)]
-      print 'len(candidates)', len(candidates)
       
-      """if not candidates:
-        continue
-      elif len(candidates) > 1:
-        #Prune the candidates via edit distance
-        dists = [levenshtein(tokens, other_tokens) for other_tokens, _, _ in candidates]
-        best_candidate_inds = zip(*all_min_or_max(enumerate(dists), min, lambda item: item[1]))[0]
-        if len(best_candidate_inds) > 1:
-          #Ties? Just pick one...
-          best_candidate_ind = choice(best_candidate_inds)
-        else:
-          best_candidate_ind = best_candidate_inds[0]
-        best_match = candidates[best_candidate_ind]
-      else:
-        #This was the only candidate
-        best_match = candidates[0]"""
-      
+      #Increment the count of these works
       for candidate in candidates:
-        _, title, author = candidate
+        _, title, author, para_num = candidate
         k = (title, author)
         title_author_to_count[k] = title_author_to_count.get(k, 0) + 1
-      #Increment the count of this work
-      #_, title, author = best_match
-      #k = (title, author)
-      #title_author_to_count[k] = title_author_to_count.get(k, 0) + 1
     
-    #author_guess = self.author_identifier.predict_author(elem[0] for elem in sents_and_hashes)
+    if title_author_to_count:
+      #OK, what work was the most frequent, and what was that frequency?
+      (title, author), f = max(title_author_to_count.iteritems(), key=lambda item: item[1])
     
-    if not title_author_to_count:
-      return ((None, None), 0.)
+      score = 1.*f/paras_done
+      if score >= 0.3:
+        return {'title': title, 'author': author, 'score': score, 'author_score': None}
     
-    #OK, what work was the most frequent, and what was that frequency?
-    (title, author), f = max(title_author_to_count.iteritems(), key=lambda item: item[1])
+    #This is either so corrupt that we can't tell what it is, or is a new work.
+    #Guess the author
+    tokens = [item for sublist in [tokenize(p) for p in paras] for item in sublist]
+    author_guess, author_score = self.author_identifier.predict_author(tokens)
     
-    score = 1.*f/paras_done
-    if score >= 0.3:
-      return (title, author), score
-    
-    return ((None, None), score)
+    return {'title': None, 'author': author_guess, 'score': None, 'author_score': author_score}
 
   def clear(self):
     self.simhash_index = SimhashIndex(objs=[], f=self.hash_size, k=self.hash_tol)
