@@ -5,61 +5,70 @@ from preprocess import preprocess
 from code import interact
 from copy import copy
 from utils import corrupt_text, corrupt_book
-from time import time
-
-def identify_from_sample(collection, author_to_books, iters):
+      
+def identify_with_corruption(collection, author_to_books, prob_para=0.1, prob_tok=0.5, prob_mutate=0.5):
   #Simulate identifying which work a snippet came from 
   # when the snippet came from the initial collection
-
+  
+  #This is just measuring accuracy. Do something better in reality.
+  
+  print 'Testing with'
+  print 'prob_para=%s, prob_tok=%s, prob_mutate=%s' % (prob_para, prob_tok, prob_mutate)
+  
   right, wrong = 0., 0.
-  for iter in xrange(iters):
-    #Randomly select an author
-    author = choice(author_to_books.keys())
-  
-    #Randomly select a book
-    title, doc = copy(choice(author_to_books[author]))
-  
-    #Randomly select a snippet
-    #start_ind = choice(range(len(doc)-snippet_size))
-    #snippet = doc[start_ind: start_ind + snippet_size]
+  for author in author_to_books:
+    for title, doc in author_to_books[author]:
     
-    doc = corrupt_book(doc, prob_para=0.1, prob_tok=0.5, prob_mutate=0.5)
+      #Corrupt the book
+      doc = corrupt_book(doc, prob_para=0.1, prob_tok=0.2, prob_mutate=0.5)
     
-    #Corrupt the snippet
-    #snippet = corrupt_text(snippet, corruption_prob)
-    
-    print 'Actual:', title, author
-    a = time()
-    pred = collection.get_best_match(doc)
-    print time()-a
-    print pred
-    print '-'*80
+      print '\n'
+      print 'Actual:', title, author
+      pred = collection.get_best_match(doc)
+      print 'Predition'
+      print pred
+      
 
-    (pred_title, pred_author), score = pred
+      pred_title = pred['title']
+      pred_author = pred['author']
     
-    if pred_title == title and pred_author == author:
-      right += 1
-    else:
-      wrong += 1
-    
-  return right / (right+wrong)
+      if pred_title == title and pred_author == author:
+        right += 1
+        print 'CORRECT'
+      else:
+        wrong += 1
+        print 'INCORRECT'
+      
+      print '\n'
+      print '-'*80
+  
+  print 'Got EVERYTHING right %s%% of the time. Obviously needs tuning.' % (100.*right / (right+wrong),)
     
 if __name__ == '__main__':
-  authors = listdir('data')
   author_to_books = {}
-
-  for author in authors:
+  
+  for author in listdir('data/in_sample'):
     author_to_books[author] = []
-    for title in listdir('data/' + author):
-      filename = 'data/%s/%s' % (author, title)
-      doc = open(filename).read()
-      doc = preprocess(doc)
+    for title in listdir('data/in_sample/' + author):
+      filename = 'data/in_sample/%s/%s' % (author, title)
+      doc = preprocess(open(filename).read())
       author_to_books[author].append((title, doc))
+  
+  for author in listdir('data/out_of_sample'):
+    for title in listdir('data/out_of_sample/' + author):
+      filename = 'data/out_of_sample/%s/%s' % (author, title)
+      doc = preprocess(open(filename).read())
+      author_to_books[author].append((None, doc))
 
+  #Put all the documents into the collection
   collection = DocCollection()
   for author, title_doc in author_to_books.iteritems():
     print author
     for title, doc in title_doc:
-      collection.add(doc, title, author)
-      
-  interact(local=locals())
+      if title is not None: #Don't add the out of sample books
+        collection.add(doc, title, author)
+      else:
+        print 'Not using one by', author
+  
+  #Corrupt books and see if we can recognize them
+  identify_with_corruption(collection, author_to_books)

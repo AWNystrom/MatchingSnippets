@@ -1,0 +1,38 @@
+This is a short writeup describing my solution.
+
+Part a
+When presented with the initial collection of documents, the system ads each document's
+paragraphs to a simhash index. This simhash index is used to match a corrupted document
+up with one of the documents in the initial collection. If enough paragraphs match, it's
+considered a match.
+
+Part b
+To identify the author of a previously unseen book (in the case the match in the above
+process wasn't strong enough), the system keeps a trigram Kneser Ney language model for
+each author in the collection. Tokens undergo a transformation intended to remove semantic
+specifics but keep the author's "style". Stopwords are replaced with a generic stopword
+token, punctuation is kept, and for all other tokens, the token is replaced with a special
+token indicative of its length. Three token lengths were considered based on the
+distribution of word lengths in the English language. See [1].
+
+Part c
+The system also keeps a language model for each author trained on the regular tokens. 
+These models are used to generate text for the task of generated additional text given
+an unseen document. The generation process works by looking at the last two
+tokens of the context and considering all trigrams the author's written that start with
+this bigram. It then takes a weighted sample of these trigrams according to Kneser Ney
+their Kneser Ney probability and iteratively adds a single token in this fashion until
+the specified number of tokens have been generated. One caveat is the case in which no 
+trigrams are prefixed by the specified bigram. In this case the last context token is used
+and bigrams are considered instead of trigrams. If this fails, unigrams are sampled.
+
+I'd definitely like to make improvements to the system :)
+
+Unused Work
+For author identification, I initially kept an out-of-core gaussian naive bayes model that
+could have classes added to it iteratively. Features used were things like sentence
+length, stopword count, and dependency parse frequency (yes, initially I was parsing, but
+decided against it as it was too slow). After a few tests I decided against this method
+and went the language model trained on transformed tokens route, as described above.
+
+[1] Smith, Reginald D. "Distinct word length frequencies: distributions and symbol entropies." arXiv preprint arXiv:1207.2334 (2012).

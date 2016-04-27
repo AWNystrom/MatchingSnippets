@@ -1,4 +1,4 @@
-from online_gaussian_naive_bayes import OnlineGaussianNaiveBayes
+#from online_gaussian_naive_bayes import OnlineGaussianNaiveBayes
 from numpy import array, log
 from nltk import trigrams, FreqDist, KneserNeyProbDist
 from code import interact

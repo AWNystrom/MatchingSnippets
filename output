@@ -1,0 +1,139 @@
+George_Orwell
+Not using one by George_Orwell
+John_Stevens_Cabot
+Fritz_Leiber
+Not using one by Fritz_Leiber
+Testing with
+prob_para=0.1, prob_tok=0.5, prob_mutate=0.5
+
+
+Actual: 0100011.txt George_Orwell
+Given as context (u'was', u'which')
+Predition
+{'completion': ([u'was', u'which', u'.', u'Suddenly', u',', u'as', u'he', u'was', u'also', u'announced', u'that', u'he'], 0.08956152346135901), 'author': 'George_Orwell', 'score': None, 'author_score': -44231.304920565584, 'title': None}
+INCORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: 0100021.txt George_Orwell
+Predition
+{'completion': None, 'author': 'George_Orwell', 'score': 0.24965893587994542, 'author_score': None, 'title': '0100021.txt'}
+CORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: None George_Orwell
+Given as context (u'of', u'the')
+Predition
+{'completion': ([u'of', u'the', u'last', u'\r\n', u'victorious', u'enemies', u'humble', u',', u'here', u'in', u'the', u'\r\n'], 0.21298316216417923), 'author': 'John_Stevens_Cabot', 'score': None, 'author_score': -120010.62004999704, 'title': None}
+INCORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: 23798.txt.utf-8 John_Stevens_Cabot
+Predition
+{'completion': None, 'author': 'John_Stevens_Cabot', 'score': 0.1453125, 'author_score': None, 'title': '23798.txt.utf-8'}
+CORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: 24400.txt.utf-8 John_Stevens_Cabot
+Predition
+{'completion': None, 'author': 'John_Stevens_Cabot', 'score': 0.1258426966292135, 'author_score': None, 'title': '24400.txt.utf-8'}
+CORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: 24659.txt.utf-8 John_Stevens_Cabot
+Predition
+{'completion': None, 'author': 'John_Stevens_Cabot', 'score': 0.6998556998556998, 'author_score': None, 'title': '24659.txt.utf-8'}
+CORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: 28199.txt.utf-8 John_Stevens_Cabot
+Predition
+{'completion': None, 'author': 'John_Stevens_Cabot', 'score': 0.1, 'author_score': None, 'title': '28199.txt.utf-8'}
+CORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: 30406.txt.utf-8 John_Stevens_Cabot
+Predition
+{'completion': None, 'author': 'John_Stevens_Cabot', 'score': 0.13966480446927373, 'author_score': None, 'title': '30406.txt.utf-8'}
+CORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: 3775.txt.utf-8 John_Stevens_Cabot
+Given as context (u"'", u'"')
+Predition
+{'completion': ([u"'", u'"', u'"', u'Thus', u'died', u'our', u'wise', u'commander', u',', u'however', u',', u'a'], 0.17445110528771826), 'author': 'John_Stevens_Cabot', 'score': None, 'author_score': -86920.508772522415, 'title': None}
+INCORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: 25024.txt.utf-8 Fritz_Leiber
+Predition
+{'completion': None, 'author': 'Fritz_Leiber', 'score': 0.16823899371069181, 'author_score': None, 'title': '25024.txt.utf-8'}
+CORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: 51152.txt.utf-8 Fritz_Leiber
+Predition
+{'completion': None, 'author': 'Fritz_Leiber', 'score': 0.30847457627118646, 'author_score': None, 'title': '51152.txt.utf-8'}
+CORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: 51530.txt.utf-8 Fritz_Leiber
+Predition
+{'completion': None, 'author': 'John_Stevens_Cabot', 'score': 0.3111111111111111, 'author_score': None, 'title': '24659.txt.utf-8'}
+INCORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: 51549.txt.utf-8 Fritz_Leiber
+Given as context (u'eBooks', u'.')
+Predition
+{'completion': ([u'eBooks', u'.', u' ', u'Copyright', u'laws', u'in', u'most', u'countries', u'are', u'in', u'\r\n', u'the'], 0.6602668977291063), 'author': 'Fritz_Leiber', 'score': None, 'author_score': -6827.3856967714546, 'title': None}
+INCORRECT
+
+
+--------------------------------------------------------------------------------
+
+
+Actual: None Fritz_Leiber
+Given as context (u'eBooks', u'.')
+Predition
+{'completion': ([u'eBooks', u'.', u' ', u'Nearly', u'all', u'the', u'individual', u'works', u'in', u'the', u'eyes', u'of'], 0.27689371236222426), 'author': 'Fritz_Leiber', 'score': None, 'author_score': -14790.954093984139, 'title': None}
+CORRECT
+
+
+--------------------------------------------------------------------------------
+Got EVERYTHING right 64.2857142857% of the time. Obviously needs tuning.

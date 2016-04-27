@@ -2,6 +2,7 @@ from nltk import FreqDist, KneserNeyProbDist, trigrams, SimpleGoodTuringProbDist
 from itertools import chain
 from numpy.random import choice
 from numpy import array, argmax
+from code import interact
 
 class SemanticLanguageModels(object):
   def __init__(self, smoothing=10**-10):
@@ -20,16 +21,26 @@ class SemanticLanguageModels(object):
     fd = FreqDist(trigrams(tokens))
     self.freqdists[author].update(fd)
     
-  def generate(self, author, context_tokens, num_words, iters=100):
+  def complete(self, author, tokens, num_words, iters=100):
     if self.needs_probs_recounted[author]:
       self.prob_dists[author] = KneserNeyProbDist(self.freqdists[author])
-    tokens = list(context_tokens)
-    fd = self.freqdists[author]
-    while 
+      add_unigrams(self.prob_dists[author])
+    
+    context_tokens = list(tokens)
+    #Chop off the end of tokens until we see a bigram we know.
+    while context_tokens:
+      if tuple(context_tokens[-2:]) in self.prob_dists[author]._bigrams:
+        break
+      context_tokens.pop(-1)
+    
+    context = tuple(context_tokens[-2:]) if context_tokens else (None, None)
+    probdist = self.prob_dists[author]
+    completion = generate(probdist, context, num_words, iters)
+    return completion
 
 def generate(kn, context, num, iters, maxprob=False):
   #Sample the next word, word by word.
-  
+  print 'Given as context', context
   """
   params:
     kn : A Kneser Ney distribution of trigrams
@@ -49,7 +60,7 @@ def generate(kn, context, num, iters, maxprob=False):
   #according to kneser ney
   for iteration in xrange(iters):
     trigram_frequency = {} #Track it so we can avoid loops
-    a, b = context[-2:]
+    a, b = context[-2], context[-1]
     generated = [a, b]
     for i in xrange(num):
       #Get weights for next sample

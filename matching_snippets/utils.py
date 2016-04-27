@@ -14,7 +14,7 @@ def corrupt_book(doc, prob_para, prob_tok, prob_mutate):
                   is the probability for deletion
   """
   paras = extract_paragraphs(doc)
-  paras = [[t.text for t in tokenize(para)] for para in paras]
+  paras = [tokenize(para) for para in paras]
   num_to_corrupt = int(round(len(paras)*prob_para))
   if not num_to_corrupt:
     return doc
